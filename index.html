@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.0.1">
+<meta name="version" content="2.1.0">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#2C9CDB">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,14 +20,9 @@
 
 /* ===== SAFE AREA VARIABLES ===== */
 :root{
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  /* Set by JS */
-  --tg-top: 0px;
-  --tg-bottom: 0px;
-  /* Final padding used everywhere */
-  --pad-top: max(var(--safe-top), var(--tg-top));
-  --pad-bottom: max(var(--safe-bottom), var(--tg-bottom));
+  /* --pad-top is set entirely by JS = ios_status_bar + telegram_header */
+  --pad-top: 44px;   /* safe default: at least TG header height */
+  --pad-bottom: 0px; /* set by JS */
 }
 
 html{ height:100%; overflow:hidden; }
@@ -3085,31 +3080,53 @@ document.getElementById('screen-main').addEventListener('touchmove', e => {
 // ====================== TELEGRAM & SAFE AREA ======================
 (function(){
   var tg = window.Telegram && window.Telegram.WebApp;
-  var TG_HEADER_HEIGHT = 44; // Telegram's own header bar is always ~44px on iOS
+  var TG_HEADER = 44; // Telegram header is always ~44px
+
+  // Probe CSS env(safe-area-inset-top) via computed style
+  function getCSSTopInset(){
+    try{
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:0;height:0;visibility:hidden;pointer-events:none;z-index:-1';
+      document.body.appendChild(d);
+      var v = parseInt(window.getComputedStyle(d).top) || 0;
+      document.body.removeChild(d);
+      return v;
+    }catch(e){ return 0; }
+  }
 
   function applyViewport(){
     var padTop = 0;
     var padBot = 0;
 
     if(tg){
-      // BEST: contentSafeAreaInset.top = iOS status bar + Telegram header combined
-      if(tg.contentSafeAreaInset && tg.contentSafeAreaInset.top > 0){
+      // === OPTION 1: contentSafeAreaInset.top ===
+      // = iOS status bar + Telegram header (exact, combined)
+      if(tg.contentSafeAreaInset && tg.contentSafeAreaInset.top > 5){
         padTop = tg.contentSafeAreaInset.top;
         padBot = tg.contentSafeAreaInset.bottom || 0;
+
+      // === OPTION 2: safeAreaInset.top + TG header ===
+      } else if(tg.safeAreaInset && tg.safeAreaInset.top > 0){
+        padTop = tg.safeAreaInset.top + TG_HEADER;  // SUM, not max!
+        padBot = tg.safeAreaInset.bottom || 0;
+
+      // === OPTION 3: CSS env() probe + TG header ===
       } else {
-        // FALLBACK: safeAreaInset.top (iOS status bar only) + Telegram header (44px fixed)
-        var statusBar = (tg.safeAreaInset && tg.safeAreaInset.top) ? tg.safeAreaInset.top : 0;
-        padTop = statusBar + TG_HEADER_HEIGHT;
-        padBot = (tg.safeAreaInset && tg.safeAreaInset.bottom) ? tg.safeAreaInset.bottom : 0;
+        var cssTop = getCSSTopInset();
+        padTop = cssTop + TG_HEADER;               // SUM: status bar + header
+        padBot = 0;
       }
+    } else {
+      // Not in Telegram — only iOS safe area
+      padTop = getCSSTopInset();
     }
-    // If not in Telegram, just use CSS env() which is already in --safe-top/bottom
 
-    document.documentElement.style.setProperty('--tg-top',    padTop + 'px');
-    document.documentElement.style.setProperty('--tg-bottom', padBot  + 'px');
+    // Set both variables
+    document.documentElement.style.setProperty('--pad-top',    padTop + 'px');
+    document.documentElement.style.setProperty('--pad-bottom', padBot  + 'px');
 
-    // Keep body/screens at full window height (Telegram header is overlay)
-    var vh = window.innerHeight || screen.height;
+    // Body and screen heights = full window height
+    var vh = window.innerHeight;
     document.body.style.height = vh + 'px';
     document.querySelectorAll('.screen').forEach(function(s){
       s.style.height = vh + 'px';
@@ -3130,11 +3147,11 @@ document.getElementById('screen-main').addEventListener('touchmove', e => {
     }catch(e){ console.warn('TG:', e); }
   }
 
-  // Run on load + delays to catch TG API ready state
+  // Multiple attempts — Telegram API may not be ready immediately
   applyViewport();
-  setTimeout(applyViewport, 50);
-  setTimeout(applyViewport, 200);
-  setTimeout(applyViewport, 600);
+  setTimeout(applyViewport, 80);
+  setTimeout(applyViewport, 300);
+  setTimeout(applyViewport, 800);
 
   window.addEventListener('resize', applyViewport);
   window.addEventListener('orientationchange', function(){ setTimeout(applyViewport, 300); });
@@ -3204,7 +3221,7 @@ refresh = function(){
 
 // ====================== CACHE BUSTING ======================
 (function(){
-  var CURRENT_VERSION = '2.0.1';
+  var CURRENT_VERSION = '2.1.0';
   var stored = '';
   try { stored = localStorage.getItem('farm_app_version') || ''; } catch(e){}
 
