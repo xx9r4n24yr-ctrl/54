@@ -22,39 +22,38 @@
 :root{
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left: env(safe-area-inset-left, 0px);
-  --safe-right: env(safe-area-inset-right, 0px);
-  /* Overridden by JS with Telegram values */
   --tg-top: 0px;
   --tg-bottom: 0px;
-  /* Combined */
   --pad-top: max(var(--safe-top), var(--tg-top));
   --pad-bottom: max(var(--safe-bottom), var(--tg-bottom));
+  /* Viewport — set by JS from Telegram API */
+  --game-height: 100dvh;
+  --game-offset: 0px;
 }
 
 html{
   height:100%;
-  height:100dvh;
-  height:-webkit-fill-available;
+  overflow:hidden;
 }
 body{
   font-family:'Fredoka',-apple-system,sans-serif;
-  height:100%;
-  height:100dvh;
-  height:-webkit-fill-available;
+  /* fixed: starts at --game-offset (below Telegram header) */
+  position:fixed;
+  top: var(--game-offset, 0px);
+  left:50%;
+  transform:translateX(-50%);
+  width:100%;
+  max-width:480px;
+  height: var(--game-height, 100dvh);
   overflow:hidden;
   user-select:none;-webkit-user-select:none;
-  background:#1a3a5c;
-  overscroll-behavior:none;
-  max-width:480px;
-  margin:0 auto;
-  position:relative;
   background:#87CEEB;
+  overscroll-behavior:none;
   box-shadow:0 0 50px rgba(0,0,0,.6);
 }
 
 /* SCREENS */
-.screen{display:none;position:absolute;inset:0;flex-direction:column;background:#7BB833;overflow:hidden}
+.screen{display:none;position:absolute;top:0;left:0;right:0;bottom:0;flex-direction:column;background:#7BB833;overflow:hidden}
 .screen.active{display:flex;animation:fade .25s ease-out}
 #screen-main{overflow:hidden !important;touch-action:none;background:#87CEEB}
 @keyframes fade{from{opacity:0}to{opacity:1}}
@@ -1446,39 +1445,8 @@ body.dark .empty-barn{background:rgba(0,0,0,.6)}
 <div id="modal-seed" class="seed-modal hide">
   <div class="seed-sheet">
     <div class="seed-ttl">🌱 Выбери культуру для посадки</div>
-    <div class="seed-grid">
-      <div class="seed-item" onclick="plant('wheat')">
-        <div class="seed-ic"><svg viewBox="0 0 24 24"><use href="#wheat"/></svg></div>
-        <div class="seed-info">
-          <div class="s-nm">Пшеница</div>
-          <div class="s-time">⏱ 2 часа</div>
-          <div class="s-cost">🌾 даёт 30 шт</div>
-        </div>
-      </div>
-      <div class="seed-item" onclick="plant('corn')">
-        <div class="seed-ic"><svg viewBox="0 0 24 24"><use href="#corn"/></svg></div>
-        <div class="seed-info">
-          <div class="s-nm">Кукуруза</div>
-          <div class="s-time">⏱ 3 часа</div>
-          <div class="s-cost">🌽 даёт 25 шт</div>
-        </div>
-      </div>
-      <div class="seed-item" onclick="plant('carrot')">
-        <div class="seed-ic"><svg viewBox="0 0 24 24"><use href="#carrot"/></svg></div>
-        <div class="seed-info">
-          <div class="s-nm">Морковь</div>
-          <div class="s-time">⏱ 4 часа</div>
-          <div class="s-cost">🥕 даёт 20 шт</div>
-        </div>
-      </div>
-      <div class="seed-item" onclick="plant('pumpkin')">
-        <div class="seed-ic"><svg viewBox="0 0 24 24"><use href="#pumpkin"/></svg></div>
-        <div class="seed-info">
-          <div class="s-nm">Тыква</div>
-          <div class="s-time">⏱ 6 часов</div>
-          <div class="s-cost">🎃 даёт 15 шт</div>
-        </div>
-      </div>
+    <div class="seed-grid" id="seed-grid-content">
+      <!-- Filled dynamically from CROPS config — times are always correct -->
     </div>
     <button class="seed-cancel" onclick="closeSeedModal()">Отмена</button>
   </div>
@@ -2143,20 +2111,32 @@ function renderAnimalsOverview(){
   return `
     ${topbarHTML()}
     ${headerHTML('ЖИВОТНЫЕ', `Ферма Ур. ${STATE.farmLevel}`)}
-    <div class="scroll">
+    <div class="scroll" style="background:linear-gradient(180deg,#5FAD1F,#3D8010)">
       <div class="aov-grid">
         ${overview('chicken')}
         ${overview('pig')}
         ${overview('sheep')}
         ${overview('cow')}
       </div>
-      <div class="section-bar">📊 Производство за день</div>
+      <div class="section-bar" style="margin:0 10px 8px;border-radius:12px">📊 Производство за день</div>
       <div class="daily-grid">
         <div class="daily-card"><svg viewBox="0 0 24 24"><use href="#egg"/></svg><div class="n">${Math.round(getAliveCount('chicken')*STATE.b.chicken.rate*3600*24)||0}</div><div class="l">яиц/д.</div></div>
         <div class="daily-card"><svg viewBox="0 0 24 24"><use href="#meat"/></svg><div class="n">${Math.round(getAliveCount('pig')*STATE.b.pig.rate*3600*24)||0}</div><div class="l">мяса/д.</div></div>
         <div class="daily-card"><svg viewBox="0 0 24 24"><use href="#wool"/></svg><div class="n">${Math.round(getAliveCount('sheep')*STATE.b.sheep.rate*3600*24)||0}</div><div class="l">шерсти/д.</div></div>
         <div class="daily-card"><svg viewBox="0 0 24 24"><use href="#milk"/></svg><div class="n">${Math.round(getAliveCount('cow')*STATE.b.cow.rate*3600*24)||0}</div><div class="l">молока/д.</div></div>
       </div>
+      <div style="padding:8px 10px">
+        <button class="collect-all" onclick="['chicken','pig','sheep','cow'].forEach(collectAnimal)">
+          🧺 Собрать всю продукцию
+        </button>
+      </div>
+    </div>
+    <div class="bnav">
+      <div class="it" onclick="showScreen('screen-main')"><svg><use href="#n-home"/></svg><span class="nm">Ферма</span></div>
+      <div class="it active"><svg><use href="#i-animals"/></svg><span class="nm">Животные</span></div>
+      <div class="it" onclick="showScreen('screen-fields')"><svg><use href="#i-fields"/></svg><span class="nm">Поля</span></div>
+      <div class="it" onclick="showScreen('screen-warehouse')"><span style="font-size:22px">📦</span><span class="nm">Склад</span></div>
+      <div class="it" onclick="showScreen('screen-market')"><svg><use href="#n-shop"/></svg><span class="nm">Рынок</span></div>
     </div>
   `;
 }
@@ -2926,6 +2906,21 @@ function collectAnimal(animal){
 let _pendingPlotId = null;
 function openSeedModal(plotId){
   _pendingPlotId = plotId;
+  // Populate seed grid dynamically — times always match CROPS config
+  const grid = document.getElementById('seed-grid-content');
+  if(grid){
+    const emojis = {wheat:'🌾', corn:'🌽', carrot:'🥕', pumpkin:'🎃'};
+    grid.innerHTML = Object.entries(CROPS).map(([key,c])=>
+      `<div class="seed-item" onclick="plant('${key}')">
+        <div class="seed-ic"><svg viewBox="0 0 24 24"><use href="#${c.ic}"/></svg></div>
+        <div class="seed-info">
+          <div class="s-nm">${c.nm}</div>
+          <div class="s-time">⏱ ${fmtTime(c.growMs)}</div>
+          <div class="s-cost">${emojis[key]} даёт ${c.yield} шт</div>
+        </div>
+      </div>`
+    ).join('');
+  }
   document.getElementById('modal-seed').classList.remove('hide');
 }
 function closeSeedModal(){
@@ -3095,42 +3090,46 @@ document.getElementById('screen-main').addEventListener('touchmove', e => {
 (function(){
   var tg = window.Telegram && window.Telegram.WebApp;
 
-  function applySafeArea(){
-    var top = 0, bottom = 0;
+  function applyViewport(){
+    var totalH   = window.innerHeight;
+    var usableH  = totalH;
+
+    // Get the actual usable height from Telegram (excludes Telegram's own header)
     if(tg){
-      // contentSafeAreaInset includes space below Telegram's own header
-      if(tg.contentSafeAreaInset){
-        top    = Math.max(top,    tg.contentSafeAreaInset.top    || 0);
-        bottom = Math.max(bottom, tg.contentSafeAreaInset.bottom || 0);
-      }
-      // safeAreaInset includes iOS status bar + home indicator
-      if(tg.safeAreaInset){
-        top    = Math.max(top,    tg.safeAreaInset.top    || 0);
-        bottom = Math.max(bottom, tg.safeAreaInset.bottom || 0);
-      }
-    }
-    // Fallback: probe CSS env() via getBoundingClientRect
-    if(top < 1){
-      var probe = document.createElement('div');
-      probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);height:0;left:0;right:0;opacity:0;pointer-events:none;z-index:-1';
-      document.body.appendChild(probe);
-      var rect = probe.getBoundingClientRect();
-      document.body.removeChild(probe);
-      if(rect.top > 5) top = rect.top;
+      var stable = tg.viewportStableHeight || 0;
+      var live   = tg.viewportHeight        || 0;
+      // Use the best non-zero value
+      if(stable > 50) usableH = stable;
+      else if(live > 50) usableH = live;
     }
 
-    document.documentElement.style.setProperty('--tg-top',    top    + 'px');
-    document.documentElement.style.setProperty('--tg-bottom', bottom + 'px');
-  }
+    // topOffset = how many px the Telegram header (+ iOS status bar) takes
+    var topOffset = Math.max(0, totalH - usableH);
 
-  function fixHeight(){
-    var vh = (tg && tg.viewportStableHeight && tg.viewportStableHeight > 100)
-      ? tg.viewportStableHeight
-      : window.innerHeight;
-    document.body.style.height = vh + 'px';
-    document.querySelectorAll('.screen').forEach(function(s){ s.style.height = vh + 'px'; });
-    var ms = document.getElementById('screen-main');
-    if(ms) ms.style.height = vh + 'px';
+    // Apply to CSS variables so body positions correctly
+    document.documentElement.style.setProperty('--game-height',  usableH  + 'px');
+    document.documentElement.style.setProperty('--game-offset',  topOffset + 'px');
+
+    // Update body and all screens directly (CSS variable may lag)
+    document.body.style.top    = topOffset + 'px';
+    document.body.style.height = usableH   + 'px';
+    document.querySelectorAll('.screen').forEach(function(s){
+      s.style.height = usableH + 'px';
+    });
+
+    // Safe area WITHIN the usable viewport (e.g. iOS home indicator)
+    var safeTop = 0, safeBot = 0;
+    if(tg && tg.safeAreaInset){
+      safeTop = tg.safeAreaInset.top    || 0;
+      safeBot = tg.safeAreaInset.bottom || 0;
+    }
+    // contentSafeAreaInset = insets inside the viewport reserved by Telegram UI
+    if(tg && tg.contentSafeAreaInset){
+      safeTop = Math.max(safeTop, tg.contentSafeAreaInset.top    || 0);
+      safeBot = Math.max(safeBot, tg.contentSafeAreaInset.bottom || 0);
+    }
+    document.documentElement.style.setProperty('--tg-top',    safeTop + 'px');
+    document.documentElement.style.setProperty('--tg-bottom', safeBot  + 'px');
   }
 
   if(tg){
@@ -3138,19 +3137,23 @@ document.getElementById('screen-main').addEventListener('touchmove', e => {
       tg.ready();
       tg.expand();
       if(tg.requestFullscreen) tg.requestFullscreen();
-      tg.setHeaderColor('#1E6FB0');
-      tg.setBackgroundColor('#1E6FB0');
-      if(tg.disableVerticalSwipes) tg.disableVerticalSwipes();
-      tg.onEvent('viewportChanged',        function(){ applySafeArea(); fixHeight(); });
-      tg.onEvent('safeAreaChanged',        applySafeArea);
-      tg.onEvent('contentSafeAreaChanged', applySafeArea);
-    }catch(e){ console.warn('TG init:', e); }
+      tg.setHeaderColor && tg.setHeaderColor('#1E6FB0');
+      tg.setBackgroundColor && tg.setBackgroundColor('#1E6FB0');
+      tg.disableVerticalSwipes && tg.disableVerticalSwipes();
+
+      tg.onEvent('viewportChanged',        applyViewport);
+      tg.onEvent('safeAreaChanged',        applyViewport);
+      tg.onEvent('contentSafeAreaChanged', applyViewport);
+    }catch(e){ console.warn('TG:', e); }
   }
 
-  applySafeArea();
-  fixHeight();
-  window.addEventListener('resize', function(){ applySafeArea(); fixHeight(); });
-  window.addEventListener('orientationchange', function(){ setTimeout(function(){ applySafeArea(); fixHeight(); }, 300); });
+  // Run immediately and again after a short delay (Telegram may not be ready instantly)
+  applyViewport();
+  setTimeout(applyViewport, 100);
+  setTimeout(applyViewport, 500);
+
+  window.addEventListener('resize',            applyViewport);
+  window.addEventListener('orientationchange', function(){ setTimeout(applyViewport, 300); });
 })();
 
 function toggleDarkMode(){
