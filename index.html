@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.4.0">
+<meta name="version" content="2.6.0">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#2C9CDB">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -65,9 +65,18 @@ body{
   width:54px;height:54px;border-radius:50%;flex-shrink:0;position:relative;
   background:radial-gradient(circle at 30% 30%,#FFD4A8,#E29A5F);
   border:3px solid #fff;
-  box-shadow:0 3px 6px rgba(0,0,0,.4),inset 0 -3px 0 rgba(0,0,0,.15)
+  box-shadow:0 3px 6px rgba(0,0,0,.4),inset 0 -3px 0 rgba(0,0,0,.15);
+  overflow:hidden;cursor:pointer
 }
-.avatar svg{width:100%;height:100%;border-radius:50%}
+.avatar svg,.avatar img{width:100%;height:100%;border-radius:50%;display:block}
+.avatar img{object-fit:cover}
+/* Initials avatar fallback */
+.avatar-initials{
+  width:100%;height:100%;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:700;color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.4);letter-spacing:-.5px
+}
 .lvl-badge{
   position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
   background:linear-gradient(180deg,#4FB7FF,#1976D2);
@@ -884,7 +893,66 @@ body.dark .wood-sign{
 /* empty barn */
 body.dark .empty-barn{background:rgba(0,0,0,.6)}
 
-@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+/* ============ LUCK WHEEL ============ */
+.wheel-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:400;backdrop-filter:blur(6px)}
+.wheel-modal.hide{display:none}
+.wheel-box{
+  background:linear-gradient(180deg,#1A0E05,#2A1810);
+  border:3px solid #FFD55A;border-radius:28px;
+  padding:20px;width:calc(100% - 32px);max-width:380px;text-align:center;
+  box-shadow:0 0 60px rgba(255,213,90,.3)
+}
+.wheel-title{font-size:22px;font-weight:700;color:#FFD55A;margin-bottom:16px;text-shadow:0 0 20px rgba(255,213,90,.6)}
+.wheel-wrap{position:relative;width:280px;height:280px;margin:0 auto 16px}
+.wheel-disc{
+  width:280px;height:280px;border-radius:50%;
+  border:5px solid #FFD55A;
+  box-shadow:0 0 0 3px rgba(0,0,0,.5),0 0 30px rgba(255,213,90,.4);
+  position:relative;overflow:hidden;
+  transition:transform 4s cubic-bezier(.17,.67,.12,.99)
+}
+.wheel-pointer{
+  position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  width:0;height:0;
+  border-left:12px solid transparent;
+  border-right:12px solid transparent;
+  border-top:24px solid #FFD55A;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));
+  z-index:5
+}
+.wheel-center{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+}
+.wheel-center-btn{
+  width:58px;height:58px;border-radius:50%;
+  background:linear-gradient(135deg,#FFE878,#E8A800);
+  border:4px solid #fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:#5D3A1F;cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 -3px 0 rgba(0,0,0,.2);
+  transition:transform .1s;z-index:10
+}
+.wheel-center-btn:active{transform:scale(.95)}
+.wheel-result{font-size:20px;font-weight:700;color:#FFD55A;min-height:36px;margin:8px 0}
+.wheel-timer{font-size:13px;color:rgba(255,213,90,.7);font-weight:600}
+.wheel-seg-label{position:absolute;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);pointer-events:none;transform-origin:0 50%;white-space:nowrap}
+
+/* ============ TUTORIAL ============ */
+.tutorial-modal{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;justify-content:center;z-index:500;backdrop-filter:blur(4px)}
+.tutorial-modal.hide{display:none}
+.tutorial-box{
+  background:linear-gradient(180deg,#FFF4D6,#F0E0A8);
+  border:3px solid #FFD55A;border-radius:28px 28px 0 0;
+  padding:24px 20px 28px;width:100%;max-width:480px;
+  box-shadow:0 -8px 40px rgba(0,0,0,.5)
+}
+.tut-emoji{font-size:60px;margin-bottom:12px;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.2))}
+.tut-title{font-size:20px;font-weight:700;color:#5D3A1F;margin-bottom:8px;line-height:1.2}
+.tut-desc{font-size:14px;color:#8B5E3C;font-weight:600;line-height:1.5;margin-bottom:16px}
+.tut-dots{display:flex;justify-content:center;gap:6px;margin-bottom:16px}
+.tut-actions{display:flex;gap:10px}
+.tut-skip{flex:1;padding:12px;background:rgba(139,94,60,.15);color:#8B5E3C;border:1.5px solid rgba(139,94,60,.3);border-radius:14px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.tut-next{flex:2;padding:12px;background:linear-gradient(180deg,#FFE066,#E8A800);color:#5D3A1F;border:2px solid rgba(255,255,255,.5);border-radius:14px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 10px rgba(200,140,0,.4),inset 0 -3px 0 rgba(0,0,0,.15)}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
@@ -1259,7 +1327,8 @@ body.dark .empty-barn{background:rgba(0,0,0,.6)}
 <div id="screen-main" class="screen active">
 
   <div class="topbar">
-    <div class="avatar">
+    <div class="avatar" id="main-avatar" onclick="showScreen('screen-settings')">
+      <!-- Filled by JS with TG avatar or initials -->
       <svg viewBox="0 0 48 48"><use href="#avatar"/></svg>
       <div class="lvl-badge" id="main-lvl-badge">1</div>
     </div>
@@ -1302,9 +1371,9 @@ body.dark .empty-barn{background:rgba(0,0,0,.6)}
       <div class="badge">5</div>
     </div>
 
-    <div class="farm-plate">
-      Моя ферма
-      <span class="lvl">Уровень <span data-flevel>12</span></span>
+    <div class="farm-plate" id="farm-plate">
+      <span id="farm-plate-name">Моя ферма</span>
+      <span class="lvl">Уровень <span data-flevel>1</span></span>
     </div>
   </div>
 
@@ -1448,6 +1517,37 @@ body.dark .empty-barn{background:rgba(0,0,0,.6)}
   </div>
 </div>
 
+<!-- ============ LUCK WHEEL MODAL ============ -->
+<div id="modal-wheel" class="wheel-modal hide">
+  <div class="wheel-box">
+    <div class="wheel-title">🎡 Колесо удачи</div>
+    <div class="wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <div class="wheel-disc" id="wheel-disc"></div>
+      <div class="wheel-center">
+        <div class="wheel-center-btn" id="wheel-spin-btn" onclick="spinWheel()">КРУТИ!</div>
+      </div>
+    </div>
+    <div class="wheel-result" id="wheel-result">&nbsp;</div>
+    <div class="wheel-timer" id="wheel-timer"></div>
+    <button class="gold-btn" onclick="closeWheel()" style="margin-top:10px;padding:12px;font-size:14px">Закрыть</button>
+  </div>
+</div>
+
+<!-- ============ TUTORIAL MODAL ============ -->
+<div id="modal-tutorial" class="tutorial-modal hide">
+  <div class="tutorial-box">
+    <span class="tut-emoji" id="tut-img">🏡</span>
+    <div class="tut-title" id="tut-title">Добро пожаловать!</div>
+    <div class="tut-desc" id="tut-desc"></div>
+    <div class="tut-dots" id="tut-dots"></div>
+    <div class="tut-actions">
+      <button class="tut-skip" onclick="skipTutorial()">Пропустить</button>
+      <button class="tut-next" id="tut-btn" onclick="nextTutorialStep()">Далее →</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -1455,7 +1555,10 @@ body.dark .empty-barn{background:rgba(0,0,0,.6)}
 const STATE = {
   coins:0, gems:0, ton:0, farmLevel:1, xp:0,
   darkMode: false,
-  achievements: {},  // {achId: true} when claimed
+  achievements: {},
+  notifications: { enabled: false, chatId: null, lastHunger: 0, lastHarvest: 0, lastDaily: 0 },
+  wheel:    { lastSpin: 0 },
+  tutorial: { done: false, step: 0 },  // {achId: true} when claimed
   inv:{eggs:0,meat:0,wool:0,milk:0,wheat:0,corn:0,carrot:0,pumpkin:0},
   fields:[
     {id:0,crop:null,state:'empty',plantedAt:0,readyAt:0},
@@ -1622,13 +1725,35 @@ const $ = (s,e=document) => e.querySelector(s);
 const $$ = (s,e=document) => [...e.querySelectorAll(s)];
 const fmt = n => Math.floor(n).toLocaleString('ru').replace(/,/g,' ');
 
+// ====================== TELEGRAM USER ======================
+var TG_USER_COLORS = ['#E53935','#8E24AA','#1E88E5','#00897B','#F4511E','#6D4C41','#546E7A'];
+function getTGUser(){
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+  if(!u) return {name:'Фермер', initials:'🧑', color:'#5D7A3A', photo:null};
+  var name = u.first_name + (u.last_name ? ' '+u.last_name : '');
+  var initials = (u.first_name||'?').charAt(0).toUpperCase() + (u.last_name ? u.last_name.charAt(0).toUpperCase() : '');
+  var color = TG_USER_COLORS[(u.id||0) % TG_USER_COLORS.length];
+  return {name:name, username:u.username||'', initials:initials, color:color, photo:u.photo_url||null, id:u.id};
+}
+
+function avatarHTML(){
+  var u = getTGUser();
+  if(u.photo){
+    return '<img src="'+u.photo+'" alt="'+u.name+'" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">'
+      + '<div class="avatar-initials" style="display:none;background:'+u.color+'">'+u.initials+'</div>';
+  }
+  return '<div class="avatar-initials" style="background:'+u.color+'">'+u.initials+'</div>';
+}
+
 function topbarHTML(){
   var xp = STATE.xp||0;
   var xpNeeded = STATE.farmLevel * 200;
   var xpPct = Math.min(100, (xp / xpNeeded) * 100);
+  var u = getTGUser();
   return `<div class="topbar">
-    <div class="avatar" style="position:relative">
-      <svg viewBox="0 0 48 48"><use href="#avatar"/></svg>
+    <div class="avatar" onclick="showScreen('screen-settings')" title="${u.name}" style="position:relative">
+      ${avatarHTML()}
       <div class="lvl-badge">${STATE.farmLevel}</div>
       <div style="position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:46px;height:5px;background:rgba(0,0,0,.35);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,.3)">
         <div style="height:100%;width:${xpPct.toFixed(0)}%;background:linear-gradient(90deg,#FFE878,#E8A800);border-radius:2px;transition:width .4s"></div>
@@ -2830,10 +2955,19 @@ function renderSettings(){
   var div = dm ? 'rgba(255,213,90,.12)' : '#C49A6C';
   var bg = dm ? 'linear-gradient(180deg,#1A1A2E,#0D0D1A)' : 'linear-gradient(180deg,#7BB833,#5A9928)';
 
+  var notifOn = STATE.notifications && STATE.notifications.enabled;
+
   var dmToggle = '<div onclick="toggleDarkMode()" style="padding:14px 16px;border-bottom:1px solid '+div+';display:flex;justify-content:space-between;align-items:center;cursor:pointer">'
     + '<span style="font-size:15px;font-weight:700;color:'+tc+'">🌙 Тёмный режим</span>'
     + '<div style="width:52px;height:28px;border-radius:14px;background:'+(dm?'linear-gradient(180deg,#FFD55A,#E8A800)':'linear-gradient(180deg,#C0C0C0,#909090)')+';box-shadow:inset 0 2px 4px rgba(0,0,0,.3);border:1.5px solid rgba(255,255,255,.3);position:relative;transition:background .3s">'
     + '<div style="position:absolute;top:3px;left:'+(dm?'27':'3')+'px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.35);transition:left .3s;display:flex;align-items:center;justify-content:center;font-size:12px">'+(dm?'🌙':'☀️')+'</div>'
+    + '</div></div>';
+
+  var notifToggle = '<div onclick="'+(notifOn?'disableNotifications()':'enableNotifications()')+'" style="padding:14px 16px;border-bottom:1px solid '+div+';display:flex;justify-content:space-between;align-items:center;cursor:pointer">'
+    + '<div><span style="font-size:15px;font-weight:700;color:'+tc+'">🔔 Уведомления</span>'
+    + '<div style="font-size:11px;color:'+sc+';font-weight:600;margin-top:2px">'+(notifOn?'Включены — от бота':'Выключены — нажми чтобы включить')+'</div></div>'
+    + '<div style="width:52px;height:28px;border-radius:14px;background:'+(notifOn?'linear-gradient(180deg,#7CE042,#4CA827)':'linear-gradient(180deg,#C0C0C0,#909090)')+';box-shadow:inset 0 2px 4px rgba(0,0,0,.3);border:1.5px solid rgba(255,255,255,.3);position:relative;transition:background .3s">'
+    + '<div style="position:absolute;top:3px;left:'+(notifOn?'27':'3')+'px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.35);transition:left .3s;display:flex;align-items:center;justify-content:center;font-size:12px">'+(notifOn?'🔔':'🔕')+'</div>'
     + '</div></div>';
 
   function row(ic, label, val){
@@ -2844,17 +2978,21 @@ function renderSettings(){
   }
 
   return topbarHTML()
-    + headerHTML('НАСТРОЙКИ','v2.2.0')
+    + headerHTML('НАСТРОЙКИ','v2.5.0')
     + '<div style="padding:12px;flex:1;overflow-y:auto;background:'+bg+'">'
     + '<div style="background:'+cardBg+';border-radius:18px;overflow:hidden;box-shadow:0 5px 12px rgba(0,0,0,.25);margin-bottom:12px;border:2.5px solid '+border+'">'
     + dmToggle
-    + row('🔔','Уведомления','Вкл')
+    + notifToggle
     + row('🔊','Звук','Вкл')
     + '<div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:'+tc+'">🌍 Язык</span><span style="color:'+sc+';font-weight:600">Русский</span></div>'
     + '</div>'
+    + '<div style="background:'+cardBg+';border-radius:18px;overflow:hidden;box-shadow:0 5px 12px rgba(0,0,0,.25);margin-bottom:12px;border:2.5px solid '+border+'">'
+    + '<div onclick="startTutorial()" style="padding:14px 16px;border-bottom:1px solid '+div+';display:flex;justify-content:space-between;align-items:center;cursor:pointer"><span style="font-size:15px;font-weight:700;color:'+tc+'">📖 Пройти обучение</span><span style="color:#4FB7FF;font-weight:700">Начать →</span></div>'
+    + '<div onclick="openWheel()" style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer"><span style="font-size:15px;font-weight:700;color:'+tc+'">🎡 Колесо удачи</span><span style="color:#FFD55A;font-weight:700">Открыть →</span></div>'
+    + '</div>'
     + '<div style="background:'+cardBg+';border-radius:18px;overflow:hidden;box-shadow:0 5px 12px rgba(0,0,0,.25);border:2.5px solid '+border+'">'
     + '<div style="padding:14px 16px;border-bottom:1px solid '+div+';display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:'+tc+'">👤 Профиль</span><span style="color:#4FB7FF;font-weight:700">Изменить →</span></div>'
-    + '<div style="padding:14px 16px;font-size:14px;font-weight:700;color:'+sc+'">Версия 2.2.0</div>'
+    + '<div style="padding:14px 16px;font-size:14px;font-weight:700;color:'+sc+'">Версия 2.5.0</div>'
     + '</div></div>';
 }
 
@@ -2893,24 +3031,36 @@ function showScreen(id){
   }
 }
 
+function updateMainAvatar(){
+  var u = getTGUser();
+  var el = document.getElementById('main-avatar');
+  if(el){
+    var xpPct = Math.min(100, ((STATE.xp||0)/(STATE.farmLevel*200))*100);
+    el.innerHTML = avatarHTML()
+      + '<div class="lvl-badge" id="main-lvl-badge">' + STATE.farmLevel + '</div>'
+      + '<div style="position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:46px;height:5px;background:rgba(0,0,0,.35);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,.3)">'
+      + '<div style="height:100%;width:'+xpPct.toFixed(0)+'%;background:linear-gradient(90deg,#FFE878,#E8A800);border-radius:2px"></div></div>';
+  }
+  var nameEl = document.getElementById('farm-plate-name');
+  if(nameEl) nameEl.textContent = u.name ? 'Ферма ' + u.name.split(' ')[0] : 'Моя ферма';
+}
+
 function updateDisplays(){
   initDailyTasks();
   $$('[data-coins]').forEach(el => el.textContent = fmt(STATE.coins));
   $$('[data-gems]').forEach(el => el.textContent = STATE.gems);
-  $$('[data-ton]').forEach(el => el.textContent = STATE.ton.toFixed(2));
+  $$('[data-ton]').forEach(el => el.textContent = (STATE.ton||0).toFixed(2));
   $$('[data-flevel]').forEach(el => el.textContent = STATE.farmLevel);
-  const mb = document.getElementById('main-lvl-badge');
-  if(mb) mb.textContent = STATE.farmLevel;
   Object.keys(STATE.inv).forEach(k => {
     $$(`[data-inv="${k}"]`).forEach(el => el.textContent = STATE.inv[k]);
   });
-  // Tasks badge: show if any completed but not claimed
   const hasPending = TASKS_CFG.some(c => {
     const done = (STATE.tasks.progress[c.id]||0) >= c.goal;
     return done && !STATE.tasks.claimed[c.id];
   });
   const tb = document.getElementById('tasks-badge');
   if(tb) tb.style.display = hasPending ? 'flex' : 'none';
+  updateMainAvatar();
 }
 
 // ====================== ACTIONS ======================
@@ -3113,7 +3263,284 @@ function claimDaily(){
 }
 
 // ====== WELCOME CHEST ======
-// Welcome chest handled inline in tasks screen
+// ====================== NOTIFICATIONS ======================
+// ⚠️ Note: token in client code is visible to users. Move to backend for production.
+var BOT_TOKEN = '8985341751:AAE30-obNND9Ann4NgN3A9ZsP0l2eXuKEvs';
+
+function sendBotMsg(chatId, text){
+  if(!chatId || !BOT_TOKEN) return;
+  fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({chat_id: chatId, text: text, parse_mode:'HTML'})
+  }).catch(function(){});
+}
+
+function requestNotifPermission(callback){
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if(!tg){ toast('Доступно только в Telegram'); return; }
+  if(tg.requestWriteAccess){
+    tg.requestWriteAccess(function(granted){
+      if(granted){
+        var uid = tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id;
+        if(uid){ if(callback) callback(uid); }
+        else toast('Не удалось получить ID пользователя');
+      } else {
+        toast('❌ Разрешение не дано');
+      }
+    });
+  } else {
+    // Fallback for older Telegram — use user id directly
+    var uid2 = tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id;
+    if(uid2){ if(callback) callback(uid2); }
+    else toast('requestWriteAccess не поддерживается');
+  }
+}
+
+function enableNotifications(){
+  requestNotifPermission(function(chatId){
+    STATE.notifications.enabled = true;
+    STATE.notifications.chatId  = chatId;
+    saveGame();
+    sendBotMsg(chatId,
+      '🌾 <b>Уведомления включены!</b>\n\nБудешь получать сообщения:\n'
+      + '• 🌾 Урожай готов к сбору\n'
+      + '• 🐮 Животные голодают\n'
+      + '• 📋 Новые ежедневные задания'
+    );
+    toast('✅ Уведомления включены!');
+    refresh();
+  });
+}
+
+function disableNotifications(){
+  STATE.notifications.enabled = false;
+  saveGame();
+  toast('🔕 Уведомления отключены');
+  refresh();
+}
+
+// Run notification checks every 5 minutes while app is open
+setInterval(function(){
+  var n = STATE.notifications;
+  if(!n || !n.enabled || !n.chatId) return;
+  var now = Date.now();
+  var COOLDOWN = 30 * 60 * 1000; // 30 min between same-type notifications
+
+  // Hungry animals
+  if(now - (n.lastHunger||0) > COOLDOWN){
+    var hungry = ['chicken','pig','sheep','cow'].filter(k => getAliveCount(k)>0 && isHungry(k));
+    if(hungry.length > 0){
+      STATE.notifications.lastHunger = now;
+      var nms = {chicken:'куры 🐔',pig:'свиньи 🐷',sheep:'овцы 🐑',cow:'коровы 🐄'};
+      sendBotMsg(n.chatId, '🍽 <b>Животные голодают!</b>\n\nНа ферме голодают: ' + hungry.map(function(k){ return nms[k]; }).join(', ') + '\n\nЗайди и покорми их!');
+    }
+  }
+
+  // Ready harvests
+  if(now - (n.lastHarvest||0) > COOLDOWN){
+    var ready = STATE.fields.filter(function(f){ return f.state==='ready'; });
+    if(ready.length > 0){
+      STATE.notifications.lastHarvest = now;
+      sendBotMsg(n.chatId, '🌾 <b>Урожай готов!</b>\n\n' + ready.length + ' участков ждут тебя.\nЗайди и собери урожай!');
+    }
+  }
+}, 5 * 60 * 1000);
+
+// ====================== LUCK WHEEL ======================
+var WHEEL_SEGMENTS = [
+  {label:'100 🪙',  coins:100,  gems:0,  ton:0, color:'#E53935', emoji:'🪙'},
+  {label:'5 💎',    coins:0,    gems:5,  ton:0, color:'#1E88E5', emoji:'💎'},
+  {label:'500 🪙',  coins:500,  gems:0,  ton:0, color:'#F4A623', emoji:'🪙'},
+  {label:'50 🪙',   coins:50,   gems:0,  ton:0, color:'#43A047', emoji:'🪙'},
+  {label:'20 💎',   coins:0,    gems:20, ton:0, color:'#8E24AA', emoji:'💎'},
+  {label:'1000 🪙', coins:1000, gems:0,  ton:0, color:'#FB8C00', emoji:'🪙'},
+  {label:'1 TON',   coins:0,    gems:0,  ton:1, color:'#00897B', emoji:'💎'},
+  {label:'5000 🪙', coins:5000, gems:0,  ton:0, color:'#C0A000', emoji:'⭐'},
+];
+var WHEEL_PROBS = [25, 20, 18, 15, 10, 7, 3, 2]; // probability weights
+var _wheelSpinning = false;
+var _wheelCurrentAngle = 0;
+
+function buildWheel(){
+  var disc = document.getElementById('wheel-disc');
+  if(!disc) return;
+  var n = WHEEL_SEGMENTS.length;
+  var deg = 360 / n;
+  // Build with conic-gradient
+  var stops = WHEEL_SEGMENTS.map(function(s,i){
+    return s.color + ' ' + (i*deg) + 'deg ' + ((i+1)*deg) + 'deg';
+  }).join(', ');
+  disc.style.background = 'conic-gradient(' + stops + ')';
+  disc.style.transform = 'rotate(' + _wheelCurrentAngle + 'deg)';
+
+  // Add text labels
+  disc.innerHTML = WHEEL_SEGMENTS.map(function(s,i){
+    var angleDeg = i * deg + deg/2;
+    var rad = (angleDeg - 90) * Math.PI / 180;
+    var r = 90; // radius for label position
+    var x = 140 + r * Math.cos(rad);
+    var y = 140 + r * Math.sin(rad);
+    return '<div style="position:absolute;left:'+x+'px;top:'+y+'px;transform:translate(-50%,-50%) rotate('+angleDeg+'deg);font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap;text-align:center;line-height:1.2">'
+      + s.emoji + '<br>' + s.label.replace(/[🪙💎⭐]/g,'') + '</div>';
+  }).join('');
+
+  // Update spin button state
+  var btn = document.getElementById('wheel-spin-btn');
+  var timer = document.getElementById('wheel-timer');
+  var now = Date.now();
+  var lastSpin = STATE.wheel.lastSpin || 0;
+  var DAY = 24*60*60*1000;
+  var diff = now - lastSpin;
+  if(diff < DAY){
+    var rem = DAY - diff;
+    if(btn){ btn.textContent = '⏱'; btn.style.fontSize = '11px'; }
+    if(timer) timer.textContent = 'Следующий спин через ' + fmtTime(rem);
+  } else {
+    if(btn){ btn.textContent = 'КРУТИ!'; btn.style.fontSize = '13px'; }
+    if(timer) timer.textContent = '🎁 Бесплатный спин доступен!';
+  }
+}
+
+function openWheel(){
+  document.getElementById('modal-wheel').classList.remove('hide');
+  document.getElementById('wheel-result').innerHTML = '&nbsp;';
+  buildWheel();
+  // Update timer every second
+  if(window._wheelTimerInterval) clearInterval(window._wheelTimerInterval);
+  window._wheelTimerInterval = setInterval(buildWheel, 1000);
+}
+
+function closeWheel(){
+  document.getElementById('modal-wheel').classList.add('hide');
+  if(window._wheelTimerInterval){ clearInterval(window._wheelTimerInterval); window._wheelTimerInterval = null; }
+}
+
+function spinWheel(){
+  if(_wheelSpinning) return;
+  var now = Date.now();
+  var lastSpin = STATE.wheel.lastSpin || 0;
+  var DAY = 24*60*60*1000;
+  if(now - lastSpin < DAY){
+    toast('⏱ Следующий спин доступен через ' + fmtTime(DAY - (now - lastSpin)));
+    return;
+  }
+
+  // Pick prize by weighted probability
+  var total = WHEEL_PROBS.reduce(function(s,p){ return s+p; }, 0);
+  var rand = Math.random() * total;
+  var cum = 0, prizeIdx = 0;
+  for(var i=0; i<WHEEL_PROBS.length; i++){
+    cum += WHEEL_PROBS[i];
+    if(rand <= cum){ prizeIdx = i; break; }
+  }
+
+  var segDeg = 360 / WHEEL_SEGMENTS.length;
+  // Target: pointer (top) should point to prizeIdx segment
+  // Segment i center is at i*segDeg + segDeg/2 degrees from start
+  var targetOffset = -(prizeIdx * segDeg + segDeg / 2);
+  var totalRotation = 360 * 6 + targetOffset - (_wheelCurrentAngle % 360);
+  _wheelCurrentAngle += totalRotation;
+
+  var disc = document.getElementById('wheel-disc');
+  disc.style.transition = 'transform 4s cubic-bezier(.17,.67,.12,.99)';
+  disc.style.transform = 'rotate(' + _wheelCurrentAngle + 'deg)';
+
+  STATE.wheel.lastSpin = now;
+  saveGame();
+  _wheelSpinning = true;
+
+  var resultEl = document.getElementById('wheel-result');
+  resultEl.innerHTML = '<span style="font-size:14px;color:rgba(255,213,90,.6)">Крутим...</span>';
+
+  setTimeout(function(){
+    _wheelSpinning = false;
+    var prize = WHEEL_SEGMENTS[prizeIdx];
+    if(prize.coins) STATE.coins += prize.coins;
+    if(prize.gems)  STATE.gems  += prize.gems;
+    if(prize.ton)   STATE.ton   += prize.ton;
+    gainXP(50);
+    saveGame();
+    updateDisplays();
+
+    var msg = '';
+    if(prize.coins) msg += '+' + fmt(prize.coins) + ' 🪙';
+    if(prize.gems)  msg += (msg?'  ':'') + '+' + prize.gems + ' 💎';
+    if(prize.ton)   msg += (msg?'  ':'') + '+' + prize.ton + ' TON';
+    resultEl.innerHTML = '<div style="font-size:22px;font-weight:700;color:#FFD55A;text-shadow:0 0 20px rgba(255,213,90,.8)">'
+      + prize.emoji + ' ' + msg + '!</div>';
+
+    buildWheel(); // Update button state
+
+    // Send notification if enabled
+    if(STATE.notifications.enabled && STATE.notifications.chatId){
+      sendBotMsg(STATE.notifications.chatId, '🎡 <b>Колесо удачи!</b>\nТы выиграл ' + msg.replace(/[🪙💎⭐]/g,'').trim() + ' на колесе удачи!');
+    }
+  }, 4200);
+}
+
+// Update Бонусы button to open wheel
+function showDailyBonus(){ openWheel(); }
+
+// ====================== TUTORIAL ======================
+var TUTORIAL_STEPS = [
+  {emoji:'🌾', title:'Добро пожаловать на ферму!',
+   desc:'Это твоя ферма! Здесь ты будешь выращивать урожай, кормить животных и зарабатывать монеты и TON.'},
+  {emoji:'💰', title:'Монеты, Алмазы и TON',
+   desc:'Монеты 🪙 — основная валюта. Алмазы 💎 — премиум. TON — криптовалюта для покупки животных. Нажми + чтобы пополнить.'},
+  {emoji:'🌱', title:'Как сажать урожай',
+   desc:'Нажми «Поля» в главном меню → выбери пустой участок → выбери культуру. Пшеница растёт всего 3 минуты!'},
+  {emoji:'🐄', title:'Животные на ферме',
+   desc:'Купи животных за TON → они производят яйца, молоко, шерсть, мясо. Не забывай кормить их урожаем с полей!'},
+  {emoji:'📋', title:'Ежедневные задания',
+   desc:'Во вкладке «Задания» — ежедневные цели с наградами. Там же сундук с подарком для новичков 🎁'},
+  {emoji:'🎡', title:'Колесо удачи',
+   desc:'Каждый день крути колесо удачи — нажми кнопку «Бонусы» на главном экране. Можно выиграть монеты, алмазы и TON!'},
+  {emoji:'🚜', title:'Ты готов!',
+   desc:'Развивай ферму, выполняй заказы, приглашай друзей и зарабатывай! Удачи, фермер! 🌾'},
+];
+
+function startTutorial(){
+  STATE.tutorial.step = 0;
+  STATE.tutorial.done = false;
+  showTutorialStep(0);
+}
+
+function showTutorialStep(step){
+  var modal = document.getElementById('modal-tutorial');
+  if(!modal) return;
+  if(step >= TUTORIAL_STEPS.length){ skipTutorial(); return; }
+  var s = TUTORIAL_STEPS[step];
+  modal.classList.remove('hide');
+  document.getElementById('tut-img').textContent   = s.emoji;
+  document.getElementById('tut-title').textContent = s.title;
+  document.getElementById('tut-desc').textContent  = s.desc;
+  var lastStep = step === TUTORIAL_STEPS.length - 1;
+  document.getElementById('tut-btn').textContent = lastStep ? '🚜 Играть!' : 'Далее →';
+  // Dots
+  var dots = '';
+  for(var i = 0; i < TUTORIAL_STEPS.length; i++){
+    dots += '<div style="width:8px;height:8px;border-radius:50%;background:'
+      + (i === step ? '#FFD55A' : i < step ? 'rgba(255,213,90,.4)' : 'rgba(255,255,255,.2)')
+      + ';margin:0 3px"></div>';
+  }
+  document.getElementById('tut-dots').innerHTML = dots;
+}
+
+function nextTutorialStep(){
+  STATE.tutorial.step = (STATE.tutorial.step||0) + 1;
+  if(STATE.tutorial.step >= TUTORIAL_STEPS.length){
+    skipTutorial();
+  } else {
+    showTutorialStep(STATE.tutorial.step);
+  }
+}
+
+function skipTutorial(){
+  STATE.tutorial.done = true;
+  saveGame();
+  var modal = document.getElementById('modal-tutorial');
+  if(modal) modal.classList.add('hide');
+}
 function inlineOpenChest(){
   if(STATE.tasks.claimed['__welcome']) return;
   if(STATE.tasks.progress['__welcome_opened']) return;
@@ -3335,6 +3762,9 @@ function loadGame(){
     if(typeof saved.farmLevel === 'number') STATE.farmLevel = saved.farmLevel;
     if(typeof saved.darkMode  === 'boolean') STATE.darkMode = saved.darkMode;
     if(saved.achievements) Object.assign(STATE.achievements, saved.achievements);
+    if(saved.notifications) Object.assign(STATE.notifications, saved.notifications);
+    if(saved.wheel)    Object.assign(STATE.wheel,    saved.wheel);
+    if(saved.tutorial) Object.assign(STATE.tutorial, saved.tutorial);
     if(saved.inv) Object.assign(STATE.inv, saved.inv);
     if(saved.tasks) Object.assign(STATE.tasks, saved.tasks);
     if(saved.fields) STATE.fields = saved.fields;
@@ -3365,7 +3795,7 @@ refresh = function(){
 
 // ====================== CACHE BUSTING ======================
 (function(){
-  var CURRENT_VERSION = '2.4.0';
+  var CURRENT_VERSION = '2.6.0';
   var stored = '';
   try { stored = localStorage.getItem('farm_app_version') || ''; } catch(e){}
 
@@ -3414,6 +3844,10 @@ refresh = function(){
   updateDisplays();
   if(!loaded){
     console.log('New game started');
+  }
+  // Show tutorial on first launch
+  if(!STATE.tutorial || !STATE.tutorial.done){
+    setTimeout(startTutorial, 800);
   }
 })();
 </script>
