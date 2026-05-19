@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.2.0">
+<meta name="version" content="2.4.0">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#2C9CDB">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -218,9 +218,7 @@ body{
   background:
     linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.4)),
     repeating-linear-gradient(90deg,#9A6B45 0,#9A6B45 14px,#8B5E3C 14px,#8B5E3C 28px);
-  padding-top:calc(10px + var(--pad-top));
-  padding-bottom:16px;
-  padding-left:10px;padding-right:10px;
+  padding:10px 10px 16px; /* Normal padding — topbar above already handles safe area */
   display:flex;align-items:center;gap:10px;flex-shrink:0;
   box-shadow:0 5px 10px rgba(0,0,0,.4);position:relative;z-index:10
 }
@@ -501,7 +499,14 @@ body{
 }
 
 /* ============ SCROLL ============ */
-.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.scroll{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+}
+/* Ensure content wrapper always fills the scroll area (no ugly empty space) */
+.scroll > div, .scroll > .m-list, .scroll > .r-grid {
+  min-height:100%;
+}
 .scroll::-webkit-scrollbar{width:5px}
 .scroll::-webkit-scrollbar-thumb{background:rgba(139,94,60,.35);border-radius:3px}
 
@@ -1450,6 +1455,7 @@ body.dark .empty-barn{background:rgba(0,0,0,.6)}
 const STATE = {
   coins:0, gems:0, ton:0, farmLevel:1, xp:0,
   darkMode: false,
+  achievements: {},  // {achId: true} when claimed
   inv:{eggs:0,meat:0,wool:0,milk:0,wheat:0,corn:0,carrot:0,pumpkin:0},
   fields:[
     {id:0,crop:null,state:'empty',plantedAt:0,readyAt:0},
@@ -2075,25 +2081,31 @@ function renderAnimalsOverview(){
     const cnt = getAliveCount(k);
     const ready = Math.floor(b.col) > 0;
     const hungry = cnt>0 && isHungry(k);
+    // Build mini animals in the card thumbnail
+    const animalIcons = cnt > 0
+      ? Array.from({length:Math.min(cnt,4)}).map((_,i)=>
+          `<g transform="translate(${18+i*14} 30) scale(0.38)"><use href="#${cfg.icon}"/></g>`
+        ).join('')
+      : `<text x="50" y="38" font-size="11" fill="rgba(255,255,255,.6)" text-anchor="middle">Пусто</text>`;
     return `<div class="aov-card" onclick="showScreen('screen-${k}')">
       ${ready?'<div class="badge">!</div>':''}
-      ${hungry?'<div class="hungry-badge">😰</div>':''}
+      ${hungry?'<div class="hungry-badge" style="position:absolute;top:-5px;left:-5px">😰</div>':''}
       <div class="aov-pic">
-        <svg viewBox="0 0 100 70" preserveAspectRatio="xMidYMax meet">
-          <rect width="100" height="42" fill="#87CEEB"/>
-          <rect y="42" width="100" height="28" fill="#7BB833"/>
-          <ellipse cx="20" cy="40" rx="10" ry="6" fill="#5A9928"/>
-          <ellipse cx="80" cy="42" rx="12" ry="7" fill="#5A9928"/>
-          <g transform="translate(15 18)">
-            <rect x="0" y="20" width="70" height="30" fill="url(#g-wood)" stroke="#5D3A1F" stroke-width="1"/>
-            <polygon points="-3,22 35,2 73,22" fill="${k==='chicken'?'#4FB7FF':k==='pig'?'#E25749':k==='sheep'?'#9B59B6':'#3D8E1A'}" stroke="#5D3A1F" stroke-width="1"/>
+        <svg viewBox="0 0 100 55" preserveAspectRatio="xMidYMax meet">
+          <rect width="100" height="34" fill="#87CEEB"/>
+          <rect y="34" width="100" height="21" fill="#7BB833"/>
+          <ellipse cx="15" cy="33" rx="8" ry="5" fill="#5A9928"/>
+          <ellipse cx="85" cy="34" rx="10" ry="6" fill="#5A9928"/>
+          <g transform="translate(18 10)">
+            <rect x="0" y="14" width="64" height="22" fill="url(#g-wood)" stroke="#5D3A1F" stroke-width="1"/>
+            <polygon points="-2,15 32,2 66,15" fill="${k==='chicken'?'#4FB7FF':k==='pig'?'#E25749':k==='sheep'?'#9B59B6':'#3D8E1A'}" stroke="#5D3A1F" stroke-width="1"/>
           </g>
-          ${cnt>0?`<g transform="translate(35 28) scale(.4)"><use href="#${cfg.icon}"/></g>`:''}
+          ${animalIcons}
         </svg>
       </div>
       <div class="aov-nm">${cfg.ru.charAt(0)+cfg.ru.slice(1).toLowerCase()}</div>
-      <div class="aov-meta">Ур. ${b.lvl} • ${cnt}/${max} ${hungry?'😰':''}</div>
-      <button class="btn green" style="margin-top:5px" onclick="event.stopPropagation();collectAnimal('${k}')">
+      <div class="aov-meta">Ур.${b.lvl} • ${cnt}/${max}${hungry?' 😰':''}</div>
+      <button class="btn gold" style="margin-top:5px" onclick="event.stopPropagation();collectAnimal('${k}')">
         Собрать <svg class="mc" viewBox="0 0 24 24"><use href="#${cfg.prodIcon}"/></svg>
       </button>
     </div>`;
@@ -2210,26 +2222,36 @@ const MARKET = [
 ];
 
 function renderMarket(){
-  return `
-    ${topbarHTML()}
-    ${headerHTML('РЫНОК','Продажа товаров')}
-    <div class="scroll" style="background:linear-gradient(180deg,#7BB833,#5A9928)">
-      <div class="m-list">
-        ${MARKET.map(it => {
-          const have = STATE.inv[it.k] || 0;
-          return `<div class="m-item">
-            <div class="m-icw"><svg viewBox="0 0 24 24"><use href="#${it.ic}"/></svg></div>
-            <div class="m-info">
-              <div class="m-nm">${it.nm}</div>
-              <div class="m-price"><svg><use href="#mcoin"/></svg> ${it.pr} за шт</div>
-              <div class="m-have">У вас: ${have}</div>
-            </div>
-            <button class="btn orange" style="width:auto;padding:8px 16px" ${have<=0?'disabled':''} onclick="sell('${it.k}',${it.pr})">Продать</button>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-  `;
+  var dm = STATE.darkMode;
+  var bg = dm ? 'linear-gradient(180deg,#1A1A2E,#0D0D1A)' : 'linear-gradient(180deg,#7BB833,#5A9928)';
+  var cardBg = dm ? 'linear-gradient(160deg,#1E1E2E,#252535)' : 'linear-gradient(160deg,#FEFCF0,#F4E4B0)';
+  var b2 = dm ? 'rgba(255,213,90,.2)' : '#fff';
+  var nc = dm ? '#FFE9B0' : '#5D3A1F';
+  var sc = dm ? 'rgba(255,200,100,.65)' : '#8B5E3C';
+
+  var totalValue = MARKET.reduce(function(s,it){ return s + (STATE.inv[it.k]||0)*it.pr; }, 0);
+
+  var items = MARKET.map(function(it){
+    var have = STATE.inv[it.k] || 0;
+    var earn = have * it.pr;
+    return '<div style="background:'+cardBg+';border:2.5px solid '+b2+';border-radius:16px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 10px rgba(0,0,0,.15)">'
+      + '<div style="width:52px;height:52px;flex-shrink:0;background:linear-gradient(135deg,#FFD98A,#F4A623);border-radius:14px;display:flex;align-items:center;justify-content:center;border:2px solid #E69E12">'
+      + '<svg width="36" height="36" viewBox="0 0 24 24"><use href="#'+it.ic+'"/></svg></div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:15px;font-weight:700;color:'+nc+'">'+it.nm+'</div>'
+      + '<div style="font-size:12px;color:'+sc+';font-weight:600">🪙 '+it.pr+' за шт &nbsp;•&nbsp; Есть: <b style="color:'+(have>0?'#2D5410':sc)+'">'+have+'</b></div>'
+      + (earn>0 ? '<div style="font-size:12px;font-weight:700;color:#2D5410;margin-top:2px">= +'+fmt(earn)+' 🪙</div>' : '')
+      + '</div>'
+      + '<button onclick="sell(\''+it.k+'\','+it.pr+')" '+(have<=0?'disabled':'')+' class="'+(have>0?'gold-btn':'btn')+'" style="width:80px;padding:8px;font-size:13px;flex-shrink:0;'+(have<=0?'background:linear-gradient(180deg,#C8C8C8,#909090);color:#fff;border:1.5px solid #888;border-radius:12px;cursor:not-allowed':'')+'">Продать</button>'
+      + '</div>';
+  }).join('');
+
+  return topbarHTML()
+    + headerHTML('РЫНОК','Продажа товаров')
+    + '<div class="scroll" style="background:'+bg+'">'
+    + (totalValue>0 ? '<div style="background:linear-gradient(135deg,#7CE042,#4CA827);margin:10px;border-radius:16px;padding:12px 16px;border:2.5px solid #fff;box-shadow:0 5px 12px rgba(76,168,39,.35);display:flex;align-items:center;gap:12px"><div style="font-size:28px">💰</div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:#fff">Продать всё за +'+fmt(totalValue)+' 🪙</div></div><button onclick="sellAllProducts()" class="gold-btn" style="width:100px;padding:9px;font-size:13px">Продать всё</button></div>' : '')
+    + '<div style="padding:0 10px 10px">'+items+'</div>'
+    + '</div>';
 }
 
 function renderOrders(){
@@ -2261,54 +2283,93 @@ function renderOrders(){
 }
 
 function renderAchievements(){
-  // Real achievements based on STATE
-  var totalEggs = STATE.inv.eggs + Math.floor(STATE.b.chicken.col);
-  var totalMilk = STATE.inv.milk + Math.floor(STATE.b.cow.col);
-  var totalCoins = STATE.coins;
-  var chickenCnt = getAliveCount('chicken');
-  var allAnimalsCnt = getAliveCount('chicken') + getAliveCount('pig') + getAliveCount('sheep') + getAliveCount('cow');
-
-  var achs = [
-    {ic:'🥚', nm:'Первое яйцо',       d:'Собери 1 яйцо',          cur:totalEggs,   goal:1,    r:'100🪙', rg:0},
-    {ic:'🥛', nm:'Молочная ферма',     d:'Собери 50 молока',        cur:totalMilk,   goal:50,   r:'500🪙', rg:0},
-    {ic:'🌾', nm:'Богатый урожай',     d:'Накопи 100 пшеницы',      cur:STATE.inv.wheat, goal:100, r:'10💎', rg:10},
-    {ic:'🐔', nm:'Птицевод',           d:'Купи 4 курицы',           cur:chickenCnt,  goal:4,    r:'200🪙', rg:0},
-    {ic:'🐄', nm:'Ферма животных',     d:'Купи 4 разных животных',  cur:allAnimalsCnt, goal:4,  r:'50💎', rg:50},
-    {ic:'💰', nm:'Торговец',           d:'Накопи 1000 монет',        cur:totalCoins,  goal:1000, r:'20💎', rg:20},
-    {ic:'💎', nm:'Коллекционер TON',   d:'Накопи 10 TON',           cur:STATE.ton,   goal:10,   r:'500🪙', rg:0},
-    {ic:'🏆', nm:'Опытный фермер',     d:'Выполни 5 ежедневных заданий', cur:Object.values(STATE.tasks.claimed||{}).filter(Boolean).length, goal:5, r:'100💎', rg:100},
-  ];
-
   var dm = STATE.darkMode;
   var bg = dm ? 'linear-gradient(180deg,#1A1A2E,#0D0D1A)' : 'linear-gradient(180deg,#7BB833,#5A9928)';
   var cardBg = dm ? 'linear-gradient(160deg,#1E1E2E,#252535)' : 'linear-gradient(160deg,#FEFCF0,#F4E4B0)';
-  var borderCol = dm ? 'rgba(255,213,90,.2)' : '#fff';
-  var nmCol = dm ? '#FFE9B0' : '#5D3A1F';
-  var descCol = dm ? 'rgba(255,200,100,.65)' : '#8B5E3C';
+  var b2 = dm ? 'rgba(255,213,90,.2)' : '#fff';
+  var nc = dm ? '#FFE9B0' : '#5D3A1F';
+  var dc = dm ? 'rgba(255,200,100,.65)' : '#8B5E3C';
 
-  var cards = achs.map(function(a){
-    var done = a.cur >= a.goal;
-    var pct = Math.min(100, a.cur / a.goal * 100);
-    var dispCur = typeof a.cur === 'number' ? Math.floor(a.cur) : a.cur;
-    return '<div style="background:' + (done ? (dm?'linear-gradient(135deg,#0E2010,#162818)':'linear-gradient(135deg,#F1F8E9,#DCF0C3)') : cardBg) + ';border:2.5px solid ' + (done?'#4CA827':borderCol) + ';border-radius:16px;padding:12px;margin-bottom:8px;box-shadow:0 4px 10px rgba(0,0,0,' + (dm?.4:.15) + ')">'
-      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-      + '<div style="width:46px;height:46px;border-radius:14px;flex-shrink:0;background:' + (done?'linear-gradient(135deg,#7CE042,#4CA827)':'linear-gradient(135deg,#FFD98A,#F4A623)') + ';border:2px solid ' + (done?'#4CA827':'#E69E12') + ';display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 3px 6px rgba(0,0,0,.2)">' + a.ic + '</div>'
-      + '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:' + nmCol + '">' + a.nm + (done?' ✅':'') + '</div>'
-      + '<div style="font-size:11px;color:' + descCol + ';font-weight:600;margin-top:1px">' + a.d + '</div></div>'
-      + '<div style="background:linear-gradient(135deg,#FFD55A,#E69E12);border:1.5px solid #fff;border-radius:12px;padding:5px 8px;text-align:center;min-width:52px">'
-      + '<div style="font-size:12px;font-weight:700;color:#5D3A1F">' + a.r + '</div>'
-      + (a.rg ? '<div style="font-size:10px;font-weight:700;color:#1976D2">+' + a.rg + '💎</div>' : '')
-      + '</div></div>'
-      + '<div style="height:7px;background:rgba(0,0,0,.12);border-radius:4px;overflow:hidden;margin-bottom:4px"><div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + (done?'linear-gradient(90deg,#7CE042,#4CA827)':'linear-gradient(90deg,#FFD55A,#F4A623)') + ';border-radius:4px"></div></div>'
-      + '<div style="font-size:11px;font-weight:700;color:' + (done?'#2D5410':descCol) + '">' + dispCur + '/' + a.goal + '</div>'
+  var totalEggs = STATE.inv.eggs + Math.floor(STATE.b.chicken.col);
+  var totalMilk = STATE.inv.milk + Math.floor(STATE.b.cow.col);
+  var allAnimals = ['chicken','pig','sheep','cow'].filter(k=>getAliveCount(k)>0).length;
+
+  var ACHS = [
+    {id:'egg1',    ic:'🥚', nm:'Первое яйцо',      d:'Собери 1 яйцо',           cur:totalEggs,             goal:1,    coins:100, gems:0},
+    {id:'milk50',  ic:'🥛', nm:'Молочная ферма',    d:'Собери 50 молока',         cur:totalMilk,             goal:50,   coins:500, gems:0},
+    {id:'wheat100',ic:'🌾', nm:'Богатый урожай',    d:'Накопи 100 пшеницы',       cur:STATE.inv.wheat,       goal:100,  coins:0,   gems:10},
+    {id:'chicken4',ic:'🐔', nm:'Птицевод',          d:'Купи 4 курицы',            cur:getAliveCount('chicken'),goal:4, coins:200, gems:0},
+    {id:'animals4',ic:'🐄', nm:'Ферма животных',    d:'Купи 4 вида животных',     cur:allAnimals,            goal:4,    coins:0,   gems:50},
+    {id:'coins1k', ic:'💰', nm:'Торговец',          d:'Накопи 1000 монет',         cur:STATE.coins,           goal:1000, coins:0,   gems:20},
+    {id:'ton10',   ic:'💎', nm:'TON коллекционер',  d:'Накопи 10 TON',            cur:STATE.ton,             goal:10,   coins:500, gems:0},
+    {id:'tasks5',  ic:'🏆', nm:'Опытный фермер',    d:'Заберай 5 наград за задания',cur:Object.keys(STATE.tasks.claimed||{}).filter(k=>k!=='__all'&&k!=='__welcome').length,goal:5,coins:0,gems:100},
+  ];
+
+  var claimedCount = ACHS.filter(a=>(STATE.achievements||{})[a.id]).length;
+  var doneCount    = ACHS.filter(a=>Math.min(a.cur,a.goal)>=a.goal).length;
+
+  var cards = ACHS.map(function(a){
+    var cur = Math.min(a.cur, a.goal);
+    var done = cur >= a.goal;
+    var claimed = !!(STATE.achievements||{})[a.id];
+    var pct = Math.min(100, (a.cur/a.goal)*100);
+
+    var bg2 = claimed ? (dm?'linear-gradient(135deg,#0A1A0A,#0E2010)':'linear-gradient(135deg,#E8F5E9,#C8E6C9)') :
+              done    ? (dm?'linear-gradient(135deg,#0E1A0A,#162818)':'linear-gradient(135deg,#F1F8E9,#DCF0C3)') : cardBg;
+    var bord = claimed ? '#4CA827' : done ? '#7CE042' : b2;
+
+    var rewardHtml = '<div style="background:linear-gradient(135deg,#FFD55A,#E69E12);border:1.5px solid #fff;border-radius:12px;padding:5px 8px;text-align:center;flex-shrink:0;min-width:56px">'
+      + (a.coins ? '<div style="font-size:12px;font-weight:700;color:#5D3A1F">+'+fmt(a.coins)+'🪙</div>' : '')
+      + (a.gems  ? '<div style="font-size:'+(a.coins?'10':'12')+'px;font-weight:700;color:#1976D2">+'+a.gems+'💎</div>' : '')
+      + '</div>';
+
+    var bottomRow = claimed
+      ? '<div style="font-size:12px;font-weight:700;color:#2D5410;text-align:center;padding:4px 0">🏆 Награда получена!</div>'
+      : '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'
+        + '<div style="flex:1;height:7px;background:rgba(0,0,0,.12);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct.toFixed(0)+'%;background:'+(done?'linear-gradient(90deg,#7CE042,#4CA827)':'linear-gradient(90deg,#FFD55A,#F4A623)')+';border-radius:4px"></div></div>'
+        + '<span style="font-size:11px;font-weight:700;color:'+dc+';white-space:nowrap">'+Math.floor(a.cur)+'/'+a.goal+'</span>'
+        + (done ? '<button onclick="claimAchievement(\''+a.id+'\')" class="gold-btn" style="padding:5px 12px;font-size:12px;width:auto;flex-shrink:0">Забрать 🎁</button>' : '')
+        + '</div>';
+
+    return '<div style="background:'+bg2+';border:2.5px solid '+bord+';border-radius:16px;padding:12px;margin-bottom:8px;box-shadow:0 4px 10px rgba(0,0,0,.15);position:relative">'
+      + (done&&!claimed?'<div style="position:absolute;top:0;right:0;background:linear-gradient(135deg,#FFD55A,#E69E12);color:#5D3A1F;font-size:10px;font-weight:700;padding:3px 10px;border-radius:0 14px 0 10px">ЗАБРАТЬ!</div>':'')
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+      + '<div style="width:46px;height:46px;border-radius:14px;flex-shrink:0;background:'+(done?'linear-gradient(135deg,#7CE042,#4CA827)':'linear-gradient(135deg,#FFD98A,#F4A623)')+';border:2px solid '+(done?'#4CA827':'#E69E12')+';display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 3px 6px rgba(0,0,0,.2)">'+a.ic+'</div>'
+      + '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:'+nc+'">'+a.nm+(claimed?' ✅':'')+'</div>'
+      + '<div style="font-size:11px;color:'+dc+';font-weight:600;margin-top:1px">'+a.d+'</div></div>'
+      + rewardHtml+'</div>'
+      + bottomRow
       + '</div>';
   }).join('');
 
   return topbarHTML()
     + headerHTML('ДОСТИЖЕНИЯ','Награды за успехи')
-    + '<div class="scroll" style="background:' + bg + '">'
-    + '<div style="padding:10px">' + cards + '</div>'
+    + '<div class="scroll" style="background:'+bg+'">'
+    + '<div style="background:linear-gradient(135deg,#FFD55A,#E69E12);margin:10px;border-radius:16px;padding:12px 16px;border:2.5px solid #fff;box-shadow:0 5px 12px rgba(0,0,0,.2);display:flex;gap:12px;align-items:center">'
+    + '<div style="font-size:28px">🏅</div><div style="flex:1"><div style="font-size:15px;font-weight:700;color:#5D3A1F">Достижения</div>'
+    + '<div style="font-size:12px;color:#7A4F2F;font-weight:600">Выполнено: '+doneCount+'/'+ACHS.length+' • Получено: '+claimedCount+'</div></div></div>'
+    + '<div style="padding:0 10px 10px">'+cards+'</div>'
     + '</div>';
+}
+
+function claimAchievement(id){
+  if(!STATE.achievements) STATE.achievements = {};
+  if(STATE.achievements[id]){ toast('Награда уже получена!'); return; }
+  var ACHS_MAP = {
+    egg1:{coins:100,gems:0},milk50:{coins:500,gems:0},wheat100:{coins:0,gems:10},
+    chicken4:{coins:200,gems:0},animals4:{coins:0,gems:50},coins1k:{coins:0,gems:20},
+    ton10:{coins:500,gems:0},tasks5:{coins:0,gems:100}
+  };
+  var reward = ACHS_MAP[id];
+  if(!reward){ toast('Неизвестное достижение'); return; }
+  STATE.achievements[id] = true;
+  STATE.coins += reward.coins;
+  STATE.gems  += reward.gems;
+  gainXP(100);
+  var msg = '+'+fmt(reward.coins)+'🪙' + (reward.gems?' +'+reward.gems+'💎':'');
+  toast('🏆 Награда: '+msg+'!');
+  saveGame();
+  refresh();
 }
 
 function renderResearch(){
@@ -2548,34 +2609,62 @@ function renderFriends(){
   var dm = STATE.darkMode;
   var bg = dm ? 'linear-gradient(180deg,#1A1A2E,#0D0D1A)' : 'linear-gradient(180deg,#5A9928,#3D7A1A)';
   var cardBg = dm ? 'linear-gradient(160deg,#1E1E2E,#252535)' : 'linear-gradient(160deg,#FEFCF0,#F4E4B0)';
-  var b = dm ? 'rgba(255,213,90,.2)' : '#fff';
-  var nm = dm ? '#FFE9B0' : '#5D3A1F';
-  var sub = dm ? 'rgba(255,200,100,.65)' : '#8B5E3C';
+  var b2 = dm ? 'rgba(255,213,90,.2)' : '#fff';
+  var nc = dm ? '#FFE9B0' : '#5D3A1F';
+  var sc = dm ? 'rgba(255,200,100,.65)' : '#8B5E3C';
+
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var userId = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user)
+    ? tg.initDataUnsafe.user.id : '---';
+  var refLink = 'https://t.me/' + FARM_BOT + '?start=ref' + userId;
+
   var rewardRows = ['1 друг → +100🪙 +10💎','3 друга → +500🪙 +50💎 +1 TON','5 друзей → +1000🪙 +100💎 +5 TON','10 друзей → 🐄 Корова бесплатно!'];
+
   return topbarHTML()
     + headerHTML('ДРУЗЬЯ','Приглашай и зарабатывай')
     + '<div style="flex:1;overflow-y:auto;background:'+bg+';padding:12px">'
-    + '<div style="background:linear-gradient(135deg,#FFE878,#F0A800);border:3px solid rgba(255,255,255,.7);border-radius:22px;padding:20px 16px;margin-bottom:12px;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.3)">'
-    + '<div style="font-size:48px;margin-bottom:8px">👥</div>'
+    // Hero
+    + '<div style="background:linear-gradient(135deg,#FFE878,#F0A800);border:3px solid rgba(255,255,255,.7);border-radius:22px;padding:18px 16px;margin-bottom:12px;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.25)">'
+    + '<div style="font-size:44px;margin-bottom:8px">👥</div>'
     + '<div style="font-size:18px;font-weight:700;color:#5D3A1F;margin-bottom:6px">Пригласи друзей!</div>'
-    + '<div style="font-size:13px;color:#7A4F2F;font-weight:600;margin-bottom:14px">За каждого друга: <b style="font-size:15px">+100🪙 +10💎</b></div>'
-    + '<button class="gold-btn" onclick="inviteFriends()" style="font-size:15px">📨 Отправить приглашение</button>'
+    + '<div style="font-size:13px;color:#7A4F2F;font-weight:600;margin-bottom:14px">За каждого друга: <b>+100🪙 +10💎</b></div>'
+    + '<button class="gold-btn" onclick="inviteFriends()" style="font-size:15px;margin-bottom:10px">📨 Отправить приглашение</button>'
+    // Ref link
+    + '<div style="background:rgba(255,255,255,.5);border-radius:12px;padding:8px 12px;font-size:12px;font-weight:600;color:#5D3A1F;word-break:break-all;text-align:left;display:flex;align-items:center;gap:8px">'
+    + '<span style="flex:1">🔗 '+refLink+'</span>'
+    + '<button onclick="copyRefLink()" style="background:#5D3A1F;color:#FFD55A;border:none;border-radius:8px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Копировать</button>'
     + '</div>'
-    + '<div style="background:'+cardBg+';border:2.5px solid '+b+';border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 4px 10px rgba(0,0,0,.2)">'
-    + '<div style="font-size:14px;font-weight:700;color:'+nm+';margin-bottom:10px">🎁 Награды за приглашения</div>'
+    + '</div>'
+    // Rewards
+    + '<div style="background:'+cardBg+';border:2.5px solid '+b2+';border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 4px 10px rgba(0,0,0,.15)">'
+    + '<div style="font-size:14px;font-weight:700;color:'+nc+';margin-bottom:10px">🎁 Награды за приглашения</div>'
     + rewardRows.map(function(t,i){
         return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(139,94,60,.12)">'
           + '<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#FFD55A,#E8A800);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#5D3A1F;flex-shrink:0">'+(i+1)+'</div>'
-          + '<div style="font-size:13px;font-weight:700;color:'+nm+'">'+t+'</div></div>';
+          + '<div style="font-size:13px;font-weight:700;color:'+nc+'">'+t+'</div></div>';
       }).join('')
     + '</div>'
-    + '<div style="background:'+cardBg+';border:2.5px solid '+b+';border-radius:18px;padding:14px;box-shadow:0 4px 10px rgba(0,0,0,.2)">'
-    + '<div style="font-size:14px;font-weight:700;color:'+nm+';margin-bottom:8px">📊 Мои приглашения</div>'
+    // Stats
+    + '<div style="background:'+cardBg+';border:2.5px solid '+b2+';border-radius:18px;padding:14px;box-shadow:0 4px 10px rgba(0,0,0,.15)">'
+    + '<div style="font-size:14px;font-weight:700;color:'+nc+';margin-bottom:8px">📊 Мои приглашения</div>'
     + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">'
-    + '<div style="background:rgba(255,213,90,.15);border-radius:12px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:700;color:'+nm+'">0</div><div style="font-size:11px;color:'+sub+';font-weight:600">Приглашено</div></div>'
-    + '<div style="background:rgba(76,168,39,.15);border-radius:12px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:700;color:'+nm+'">0🪙</div><div style="font-size:11px;color:'+sub+';font-weight:600">Заработано</div></div>'
+    + '<div style="background:rgba(255,213,90,.15);border-radius:12px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:700;color:'+nc+'">0</div><div style="font-size:11px;color:'+sc+';font-weight:600">Приглашено</div></div>'
+    + '<div style="background:rgba(76,168,39,.15);border-radius:12px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:700;color:'+nc+'">0🪙</div><div style="font-size:11px;color:'+sc+';font-weight:600">Заработано</div></div>'
     + '</div></div>'
     + '</div>';
+}
+
+function copyRefLink(){
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var userId = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user)
+    ? tg.initDataUnsafe.user.id : '---';
+  var link = 'https://t.me/' + FARM_BOT + '?start=ref' + userId;
+  try{
+    navigator.clipboard.writeText(link);
+    toast('🔗 Ссылка скопирована!');
+  } catch(e){
+    toast('Ссылка: ' + link);
+  }
 }
 
 function renderMail(){
@@ -2734,45 +2823,39 @@ function sellAllProducts(){
 
 function renderSettings(){
   var dm = STATE.darkMode;
-  var rows = [
-    {icon:'🔔', label:'Уведомления', val:'Вкл', toggle:false},
-    {icon:'🔊', label:'Звук', val:'Вкл', toggle:false},
-    {icon:'🌍', label:'Язык', val:'Русский', toggle:false}
-  ];
-  var rowsHtml = rows.map(function(r){
-    return '<div style="padding:14px 16px;border-bottom:1px solid ' + (dm?'rgba(255,213,90,.12)':'#C49A6C') + ';display:flex;justify-content:space-between;align-items:center;font-weight:700;color:' + (dm?'#FFE9B0':'#5D3A1F') + '">'
-      + '<span>' + r.icon + ' ' + r.label + '</span>'
-      + '<span style="background:linear-gradient(180deg,#7CE042,#4CA827);color:#fff;border-radius:12px;padding:3px 14px;font-size:12px;font-weight:700;border:1.5px solid #fff">' + r.val + '</span>'
-      + '</div>';
-  }).join('');
-
-  // Dark mode row
-  var dmToggle = '<div onclick="toggleDarkMode()" style="padding:14px 16px;border-bottom:1px solid '+(dm?'rgba(255,213,90,.12)':'#C49A6C')+';display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:700;color:'+(dm?'#FFE9B0':'#5D3A1F')+'">'
-    + '<span>🌙 Тёмный режим</span>'
-    + '<div style="width:52px;height:28px;border-radius:14px;position:relative;cursor:pointer;transition:background .3s;background:' + (dm?'linear-gradient(180deg,#FFD55A,#E8A800)':'linear-gradient(180deg,#C0C0C0,#909090)') + ';box-shadow:inset 0 2px 4px rgba(0,0,0,.3),0 2px 4px rgba(0,0,0,.2);border:1.5px solid ' + (dm?'rgba(255,255,255,.4)':'rgba(0,0,0,.2)') + '">'
-    + '<div style="position:absolute;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.35);transition:left .3s;left:' + (dm?'27px':'3px') + '">'
-    + (dm ? '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px">🌙</span>' : '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px">☀️</span>')
-    + '</div></div>'
-    + '</div>';
-
   var cardBg = dm ? 'linear-gradient(160deg,#1E1E2E,#252535)' : 'linear-gradient(180deg,#FFF4D6,#F0E0A8)';
-  var cardBorder = dm ? 'rgba(255,213,90,.2)' : '#fff';
-  var textColor = dm ? '#FFE9B0' : '#5D3A1F';
-  var subColor = dm ? 'rgba(255,200,100,.6)' : '#8B5E3C';
+  var border = dm ? 'rgba(255,213,90,.2)' : '#fff';
+  var tc = dm ? '#FFE9B0' : '#5D3A1F';
+  var sc = dm ? 'rgba(255,200,100,.65)' : '#8B5E3C';
+  var div = dm ? 'rgba(255,213,90,.12)' : '#C49A6C';
+  var bg = dm ? 'linear-gradient(180deg,#1A1A2E,#0D0D1A)' : 'linear-gradient(180deg,#7BB833,#5A9928)';
+
+  var dmToggle = '<div onclick="toggleDarkMode()" style="padding:14px 16px;border-bottom:1px solid '+div+';display:flex;justify-content:space-between;align-items:center;cursor:pointer">'
+    + '<span style="font-size:15px;font-weight:700;color:'+tc+'">🌙 Тёмный режим</span>'
+    + '<div style="width:52px;height:28px;border-radius:14px;background:'+(dm?'linear-gradient(180deg,#FFD55A,#E8A800)':'linear-gradient(180deg,#C0C0C0,#909090)')+';box-shadow:inset 0 2px 4px rgba(0,0,0,.3);border:1.5px solid rgba(255,255,255,.3);position:relative;transition:background .3s">'
+    + '<div style="position:absolute;top:3px;left:'+(dm?'27':'3')+'px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.35);transition:left .3s;display:flex;align-items:center;justify-content:center;font-size:12px">'+(dm?'🌙':'☀️')+'</div>'
+    + '</div></div>';
+
+  function row(ic, label, val){
+    return '<div style="padding:14px 16px;border-bottom:1px solid '+div+';display:flex;justify-content:space-between;align-items:center">'
+      + '<span style="font-size:15px;font-weight:700;color:'+tc+'">'+ic+' '+label+'</span>'
+      + '<span style="background:linear-gradient(180deg,#7CE042,#4CA827);color:#fff;border-radius:12px;padding:3px 14px;font-size:12px;font-weight:700;border:1.5px solid #fff">'+val+'</span>'
+      + '</div>';
+  }
 
   return topbarHTML()
-    + headerHTML('НАСТРОЙКИ','v1.0.0')
-    + '<div style="padding:16px;flex:1;overflow-y:auto;background:' + (dm?'linear-gradient(180deg,#1A1A2E,#0D0D1A)':'linear-gradient(180deg,#7BB833,#5A9928)') + '">'
-    + '<div style="background:' + cardBg + ';border-radius:18px;overflow:hidden;box-shadow:0 5px 12px rgba(0,0,0,' + (dm?.5:.2) + ');margin-bottom:12px;border:2.5px solid ' + cardBorder + '">'
+    + headerHTML('НАСТРОЙКИ','v2.2.0')
+    + '<div style="padding:12px;flex:1;overflow-y:auto;background:'+bg+'">'
+    + '<div style="background:'+cardBg+';border-radius:18px;overflow:hidden;box-shadow:0 5px 12px rgba(0,0,0,.25);margin-bottom:12px;border:2.5px solid '+border+'">'
     + dmToggle
-    + rowsHtml
-    + '<div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-weight:700;color:'+textColor+'"><span>🌍 Язык</span><span style="color:'+subColor+'">Русский</span></div>'
+    + row('🔔','Уведомления','Вкл')
+    + row('🔊','Звук','Вкл')
+    + '<div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:'+tc+'">🌍 Язык</span><span style="color:'+sc+';font-weight:600">Русский</span></div>'
     + '</div>'
-    + '<div style="background:' + cardBg + ';border-radius:18px;overflow:hidden;box-shadow:0 5px 12px rgba(0,0,0,' + (dm?.5:.2) + ');border:2.5px solid ' + cardBorder + '">'
-    + '<div style="padding:14px 16px;border-bottom:1px solid '+(dm?'rgba(255,213,90,.12)':'#C49A6C')+';display:flex;justify-content:space-between;align-items:center;font-weight:700;color:'+textColor+'"><span>👤 Профиль</span><span style="color:#4FB7FF">Изменить →</span></div>'
-    + '<div style="padding:14px 16px;font-weight:700;color:'+subColor+'">Версия 1.0.0</div>'
-    + '</div>'
-    + '</div>';
+    + '<div style="background:'+cardBg+';border-radius:18px;overflow:hidden;box-shadow:0 5px 12px rgba(0,0,0,.25);border:2.5px solid '+border+'">'
+    + '<div style="padding:14px 16px;border-bottom:1px solid '+div+';display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:'+tc+'">👤 Профиль</span><span style="color:#4FB7FF;font-weight:700">Изменить →</span></div>'
+    + '<div style="padding:14px 16px;font-size:14px;font-weight:700;color:'+sc+'">Версия 2.2.0</div>'
+    + '</div></div>';
 }
 
 // ====================== NAVIGATION ======================
@@ -2989,13 +3072,35 @@ function buyTon(){
   updateDisplays();
 }
 function doResearch(name){ toast(`🔬 "${name}" начато!`); }
+// ============ REFERRAL CONFIG — replace with your bot username ============
+var FARM_BOT = 'MyFarmBot'; // <-- REPLACE with your @BotUsername
+
 function inviteFriends(){
-  if (window.Telegram?.WebApp) {
-    try {
-      window.Telegram.WebApp.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent('https://t.me/your_farm_bot') + '&text=' + encodeURIComponent('Играй со мной в Мою Ферму! 🚜'));
-    } catch(e) { toast('📨 Ссылка скопирована!'); }
-  } else {
-    toast('📨 Ссылка скопирована!');
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var userId = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user)
+    ? tg.initDataUnsafe.user.id
+    : Math.floor(Math.random()*1e9);
+  var refLink = 'https://t.me/' + FARM_BOT + '?start=ref' + userId;
+  var text = '🌾 Играю в Мою Ферму! Присоединяйся и получи стартовый подарок 🎁';
+  var shareUrl = 'https://t.me/share/url?url=' + encodeURIComponent(refLink) + '&text=' + encodeURIComponent(text);
+
+  try{
+    if(tg && tg.openTelegramLink){
+      tg.openTelegramLink(shareUrl);
+    } else if(tg && tg.openLink){
+      tg.openLink(shareUrl);
+    } else {
+      window.open(shareUrl, '_blank');
+    }
+    toast('📨 Приглашение отправлено!');
+  } catch(e){
+    // Fallback: copy link
+    try{
+      navigator.clipboard.writeText(refLink + ' ' + text);
+      toast('🔗 Ссылка скопирована!');
+    } catch(e2){
+      toast('Ссылка: ' + refLink);
+    }
   }
 }
 
@@ -3229,6 +3334,7 @@ function loadGame(){
     if(typeof saved.xp    === 'number')    STATE.xp       = saved.xp;
     if(typeof saved.farmLevel === 'number') STATE.farmLevel = saved.farmLevel;
     if(typeof saved.darkMode  === 'boolean') STATE.darkMode = saved.darkMode;
+    if(saved.achievements) Object.assign(STATE.achievements, saved.achievements);
     if(saved.inv) Object.assign(STATE.inv, saved.inv);
     if(saved.tasks) Object.assign(STATE.tasks, saved.tasks);
     if(saved.fields) STATE.fields = saved.fields;
@@ -3259,7 +3365,7 @@ refresh = function(){
 
 // ====================== CACHE BUSTING ======================
 (function(){
-  var CURRENT_VERSION = '2.2.0';
+  var CURRENT_VERSION = '2.4.0';
   var stored = '';
   try { stored = localStorage.getItem('farm_app_version') || ''; } catch(e){}
 
