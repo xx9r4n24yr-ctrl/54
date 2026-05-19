@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.1.0">
+<meta name="version" content="2.2.0">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#2C9CDB">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3080,52 +3080,90 @@ document.getElementById('screen-main').addEventListener('touchmove', e => {
 // ====================== TELEGRAM & SAFE AREA ======================
 (function(){
   var tg = window.Telegram && window.Telegram.WebApp;
-  var TG_HEADER = 44; // Telegram header is always ~44px
 
-  // Probe CSS env(safe-area-inset-top) via computed style
-  function getCSSTopInset(){
+  // Probe a CSS value by reading computed style on a test element
+  function probeCSS(prop, val){
+    try{
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;left:0;top:0;width:0;visibility:hidden;pointer-events:none;z-index:-1;'+prop+':'+val;
+      document.body.appendChild(d);
+      var v = parseInt(window.getComputedStyle(d)[prop.replace('padding-top','paddingTop').replace('height','height')]) || 0;
+      document.body.removeChild(d);
+      return v;
+    }catch(e){ return 0; }
+  }
+
+  // Read --tg-viewport-stable-height that Telegram injects into CSS
+  function getTGViewportFromCSS(){
+    try{
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;left:0;top:0;width:0;height:var(--tg-viewport-stable-height,0px);visibility:hidden;pointer-events:none;z-index:-1';
+      document.body.appendChild(d);
+      var h = parseFloat(window.getComputedStyle(d).height) || 0;
+      document.body.removeChild(d);
+      return h;
+    }catch(e){ return 0; }
+  }
+
+  // Read env(safe-area-inset-top) via computed top
+  function getEnvSafeTop(){
     try{
       var d = document.createElement('div');
       d.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:0;height:0;visibility:hidden;pointer-events:none;z-index:-1';
       document.body.appendChild(d);
-      var v = parseInt(window.getComputedStyle(d).top) || 0;
+      var t = parseFloat(window.getComputedStyle(d).top) || 0;
       document.body.removeChild(d);
-      return v;
+      return t;
     }catch(e){ return 0; }
   }
 
   function applyViewport(){
     var padTop = 0;
     var padBot = 0;
+    var TG_HEADER = 56; // Telegram header is 56px (not 44!)
 
     if(tg){
-      // === OPTION 1: contentSafeAreaInset.top ===
-      // = iOS status bar + Telegram header (exact, combined)
+      // --- METHOD 1: contentSafeAreaInset (most accurate, Bot API 7.10+) ---
       if(tg.contentSafeAreaInset && tg.contentSafeAreaInset.top > 5){
         padTop = tg.contentSafeAreaInset.top;
         padBot = tg.contentSafeAreaInset.bottom || 0;
 
-      // === OPTION 2: safeAreaInset.top + TG header ===
-      } else if(tg.safeAreaInset && tg.safeAreaInset.top > 0){
-        padTop = tg.safeAreaInset.top + TG_HEADER;  // SUM, not max!
-        padBot = tg.safeAreaInset.bottom || 0;
-
-      // === OPTION 3: CSS env() probe + TG header ===
       } else {
-        var cssTop = getCSSTopInset();
-        padTop = cssTop + TG_HEADER;               // SUM: status bar + header
-        padBot = 0;
+        // --- METHOD 2: --tg-viewport-stable-height CSS var Telegram injects ---
+        var tgVH = getTGViewportFromCSS();
+        var winH  = window.innerHeight;
+        if(tgVH > 10 && tgVH < winH - 5){
+          padTop = winH - tgVH;  // exact: total - usable = header space
+
+        // --- METHOD 3: JS API viewportStableHeight ---
+        } else if(tg.viewportStableHeight && tg.viewportStableHeight < winH - 5){
+          padTop = winH - tg.viewportStableHeight;
+
+        // --- METHOD 4: safeAreaInset (status bar) + TG header ---
+        } else if(tg.safeAreaInset && tg.safeAreaInset.top > 0){
+          padTop = tg.safeAreaInset.top + TG_HEADER;
+
+        // --- METHOD 5: CSS env() probe + TG header ---
+        } else {
+          padTop = getEnvSafeTop() + TG_HEADER;
+        }
+
+        padBot = (tg.safeAreaInset && tg.safeAreaInset.bottom) ? tg.safeAreaInset.bottom : 0;
       }
+
+      // SAFETY NET: in Telegram always at least 100px
+      // (covers all iPhones: smallest status bar 20px + header 56px = 76px,
+      //  largest DynamicIsland 59px + header 56px = 115px)
+      padTop = Math.max(padTop, 100);
+
     } else {
-      // Not in Telegram — only iOS safe area
-      padTop = getCSSTopInset();
+      // Not in Telegram — only iOS safe area from CSS
+      padTop = getEnvSafeTop();
     }
 
-    // Set both variables
     document.documentElement.style.setProperty('--pad-top',    padTop + 'px');
     document.documentElement.style.setProperty('--pad-bottom', padBot  + 'px');
 
-    // Body and screen heights = full window height
     var vh = window.innerHeight;
     document.body.style.height = vh + 'px';
     document.querySelectorAll('.screen').forEach(function(s){
@@ -3138,7 +3176,7 @@ document.getElementById('screen-main').addEventListener('touchmove', e => {
       tg.ready();
       tg.expand();
       if(tg.requestFullscreen) tg.requestFullscreen();
-      if(tg.setHeaderColor) tg.setHeaderColor('#1E6FB0');
+      if(tg.setHeaderColor)    tg.setHeaderColor('#1E6FB0');
       if(tg.setBackgroundColor) tg.setBackgroundColor('#1E6FB0');
       if(tg.disableVerticalSwipes) tg.disableVerticalSwipes();
       tg.onEvent('viewportChanged',        applyViewport);
@@ -3147,11 +3185,11 @@ document.getElementById('screen-main').addEventListener('touchmove', e => {
     }catch(e){ console.warn('TG:', e); }
   }
 
-  // Multiple attempts — Telegram API may not be ready immediately
+  // Multiple timed calls — TG API values arrive asynchronously
   applyViewport();
-  setTimeout(applyViewport, 80);
-  setTimeout(applyViewport, 300);
-  setTimeout(applyViewport, 800);
+  setTimeout(applyViewport, 100);
+  setTimeout(applyViewport, 400);
+  setTimeout(applyViewport, 900);
 
   window.addEventListener('resize', applyViewport);
   window.addEventListener('orientationchange', function(){ setTimeout(applyViewport, 300); });
@@ -3221,7 +3259,7 @@ refresh = function(){
 
 // ====================== CACHE BUSTING ======================
 (function(){
-  var CURRENT_VERSION = '2.1.0';
+  var CURRENT_VERSION = '2.2.0';
   var stored = '';
   try { stored = localStorage.getItem('farm_app_version') || ''; } catch(e){}
 
